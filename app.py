@@ -1,4 +1,4 @@
-a"""Pavel IA CV — générateur de CV et lettres de motivation sur-mesure."""
+"""Pavel IA CV — générateur de CV et lettres de motivation sur-mesure."""
 import re
 import streamlit as st
 # set_page_config doit être la toute première commande Streamlit.st.set_page_config(    page_title="Pavel IA CV",    page_icon="📄",    layout="centered",    initial_sidebar_state="collapsed",)
