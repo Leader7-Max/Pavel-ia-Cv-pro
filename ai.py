@@ -21,6 +21,8 @@ def build_prompts(p: dict) -> tuple[str, str]:
         structure = (
             "STRUCTURE DU CV (chaque titre de section en MAJUSCULES, seul sur sa ligne) :\n"
             "- Ligne 1 : nom et prénom. Ligne 2 : intitulé du poste visé.\n"
+            "- Ligne 3 : coordonnées sur une seule ligne, séparées par « | » "
+            "(seulement celles fournies : e-mail, téléphone, ville, lien).\n"
             "- PROFIL : 3 lignes maximum.\n"
             "- COMPÉTENCES CLÉS : liste courte, orientée vers l'offre.\n"
             "- EXPÉRIENCES PROFESSIONNELLES : pour chaque expérience, une ligne "
@@ -33,8 +35,8 @@ def build_prompts(p: dict) -> tuple[str, str]:
     else:
         structure = (
             "STRUCTURE DE LA LETTRE :\n"
-            "- Coordonnées du candidat (entre crochets si inconnues), lieu et date, "
-            "destinataire.\n"
+            "- Coordonnées du candidat (celles fournies ; entre crochets si inconnues), "
+            "lieu et date, destinataire.\n"
             "- Objet.\n"
             "- Formule d'appel.\n"
             "- 3 ou 4 paragraphes : accroche personnalisée, valeur ajoutée du candidat "
@@ -46,7 +48,8 @@ def build_prompts(p: dict) -> tuple[str, str]:
     system = (
         "Tu es un expert en recrutement et en rédaction de CV et de lettres de motivation, "
         "capable d'écrire des documents optimisés pour les logiciels de tri (ATS) tout en "
-        "restant agréables à lire pour un recruteur.\n"
+        "restant agréables à lire pour un recruteur. Le candidat n'est pas forcément à l'aise "
+        "avec le français : améliore ses phrases et corrige ses fautes sans changer le sens.\n"
         "RÈGLES ABSOLUES :\n"
         "1. N'invente JAMAIS de fait : employeur, diplôme, date, chiffre ou outil absent des "
         "informations fournies. Si une information utile manque, insère un champ entre "
@@ -55,27 +58,40 @@ def build_prompts(p: dict) -> tuple[str, str]:
         "Utilise « • » pour les puces.\n"
         "3. Style clair, concret, sans formules creuses ni superlatifs inutiles.\n"
         f"4. Rédige en {p['language']}.\n"
-        "5. Réponds uniquement avec le document final, sans commentaire avant ni après."
+        "5. Réponds uniquement avec le document final, sans commentaire avant ni après.\n"
+        "6. Si le candidat donne une demande spéciale, suis-la en priorité pour le style et "
+        "l'accent du document, mais sans jamais violer la règle 1."
     )
 
-    offer = p["offer"] or "Aucune offre fournie. Base-toi sur les standards du poste visé."
-    prompt = f"""Rédige : {p['doc_type']}
+    def line(label: str, value) -> str:
+        return f"- {label} : {value}\n" if value else ""
 
-INFORMATIONS SUR LE CANDIDAT
-- Nom et prénom : {p['name']}
-- Poste visé : {p['job']}
-- Entreprise ciblée : {p['company'] or 'Non précisée'}
-- Parcours et compétences : {p['background']}
-- Ton souhaité : {p['tone']}
-- Consignes particulières : {p['notes'] or 'Aucune'}
+    quick = "; ".join(p.get("quick") or [])
+    special = p.get("special") or ""
+    request = "\n".join(x for x in (quick, special) if x) or "Aucune"
 
-OFFRE D'EMPLOI DE RÉFÉRENCE
-{offer}
-
-{structure}
-
-Si une offre est fournie, reprends naturellement ses mots-clés et compétences attendues, \
-uniquement lorsqu'ils correspondent au parcours du candidat."""
+    offer = p.get("offer") or "Aucune offre fournie. Base-toi sur les standards du poste visé."
+    prompt = (
+        f"Rédige : {p['doc_type']}\n\n"
+        "INFORMATIONS SUR LE CANDIDAT\n"
+        + line("Nom et prénom", p["name"])
+        + line("E-mail", p.get("email"))
+        + line("Téléphone", p.get("phone"))
+        + line("Ville et pays", p.get("city"))
+        + line("Lien (LinkedIn ou site)", p.get("link"))
+        + line("Poste visé", p["job"])
+        + line("Entreprise ciblée", p.get("company") or "Non précisée")
+        + line("Expériences de travail", p["background"])
+        + line("Études et diplômes", p.get("education"))
+        + line("Compétences", p.get("skills"))
+        + line("Langues parlées", p.get("languages_spoken"))
+        + line("Qualités", p.get("strengths"))
+        + line("Ton souhaité", p["tone"])
+        + f"\nDEMANDE SPÉCIALE DU CANDIDAT\n{request}\n"
+        f"\nOFFRE D'EMPLOI DE RÉFÉRENCE\n{offer}\n\n{structure}\n\n"
+        "Si une offre est fournie, reprends naturellement ses mots-clés et compétences "
+        "attendues, uniquement lorsqu'ils correspondent au parcours du candidat."
+    )
     return system, prompt
 
 
@@ -120,3 +136,4 @@ if __name__ == "__main__":
     from pathlib import Path
 
     runpy.run_path(str(Path(__file__).with_name("app.py")), run_name="__main__")
+    
