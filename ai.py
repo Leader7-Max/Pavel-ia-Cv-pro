@@ -1,7 +1,10 @@
 """Génération du CV / de la lettre avec Gemini."""
 
-from google import genai
-from google.genai import types
+try:
+    from google import genai
+    from google.genai import types
+except ImportError:  # paquet absent : l'appli s'ouvre quand même et explique le problème
+    genai = types = None
 
 from config import LENGTHS, MODELS
 
@@ -78,6 +81,11 @@ uniquement lorsqu'ils correspondent au parcours du candidat."""
 
 def stream_document(api_key: str, system: str, prompt: str, temperature: float):
     """Génère le texte en flux continu, avec un modèle de secours si le premier échoue."""
+    if genai is None:
+        raise RuntimeError(
+            "Le paquet google-genai n'est pas installé. Ajoutez la ligne « google-genai » "
+            "dans requirements.txt (sans google-generativeai), puis redémarrez l'application."
+        )
     client = genai.Client(api_key=api_key)
     last_error = None
     for model in MODELS:
@@ -103,4 +111,12 @@ def stream_document(api_key: str, system: str, prompt: str, temperature: float):
                 raise  # flux interrompu en cours de route : inutile de relancer
             last_error = err
     raise last_error
-  
+
+
+# Filet de sécurité : si Streamlit lance ce fichier par erreur comme fichier principal
+# (page blanche), on démarre quand même l'interface définie dans app.py.
+if __name__ == "__main__":
+    import runpy
+    from pathlib import Path
+
+    runpy.run_path(str(Path(__file__).with_name("app.py")), run_name="__main__")
