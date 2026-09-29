@@ -6,7 +6,8 @@ import re
 import streamlit as st
 
 # set_page_config doit être la toute première commande Streamlit.
-st.set_page_config(initialiser_systeme_don()
+st.set_page_config(
+    initialiser_systeme_don()
     page_title="Pavel IA CV",
     page_icon="📄",
     layout="centered",
