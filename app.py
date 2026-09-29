@@ -1,24 +1,21 @@
-from donations import initialiser_systeme_don
-"""Pavel IA CV — générateur de CV et lettres de motivation sur-mesure."""
-
-import re
-
+from import re
 import streamlit as st
+from donations import initialiser_systeme_don
 
-# set_page_config doit être la toute première commande Streamlit.
+# Configuration principale Streamlit
 st.set_page_config(
-    initialiser_systeme_don()
     page_title="Pavel IA CV",
     page_icon="📄",
     layout="centered",
     initial_sidebar_state="collapsed",
 )
 
-from ai import build_prompts, stream_document  # noqa: E402
-from config import CSS, LENGTHS, LOGO_SVG, TONES  # noqa: E402
-from exporters import DOCX_AVAILABLE, build_docx, build_pdf  # noqa: E402
-from support import maybe_show_support, on_download, render_support  # noqa: E402
-from helpers import (  # noqa: E402
+# Lancement de la pop-up de don
+initialiser_systeme_don()
+
+# Tes anciens imports continuent ici normalement...
+from ai import build_prompts, stream_document
+from config import CSS, LENGTHS, LOGO_SVG
     bump_stat,
     clean_output,
     friendly_error,
