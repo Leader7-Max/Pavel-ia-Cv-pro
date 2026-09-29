@@ -40,7 +40,7 @@ if "user_has_liked" not in st.session_state:
 st.markdown(hero_html(), unsafe_allow_html=True)
 
 # Bouton de don visible d'emblée (la barre latérale est repliée sur mobile).
-with st.popover("💰 Soutenir Pavel IA CV"):
+with st.popover("💵 Soutenir Pavel IA CV"):
     st.markdown("**Merci pour votre soutien !**")
     render_support()
 
