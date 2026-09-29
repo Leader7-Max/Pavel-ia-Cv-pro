@@ -13,9 +13,11 @@ st.set_page_config(
 )
 
 from ai import build_prompts, stream_document  # noqa: E402
-from config import CSS, LENGTHS, LOGO_SVG, TONES  # noqa: E402
+from config import CSS, LENGTHS, TONES  # noqa: E402
 from exporters import DOCX_AVAILABLE, build_docx, build_pdf  # noqa: E402
 from support import maybe_show_support, on_download, render_support  # noqa: E402
+from templates import TEMPLATES, preview_html  # noqa: E402
+from ui import hero_html, ready_html, section_html, stepper_html  # noqa: E402
 from helpers import (  # noqa: E402
     bump_stat,
     clean_output,
@@ -35,11 +37,14 @@ if "user_has_liked" not in st.session_state:
 # ─────────────────────────────────────────────────────────────
 # Interface
 # ─────────────────────────────────────────────────────────────
-st.markdown(
-    f'<div class="brand">{LOGO_SVG}<div><h1>Pavel IA CV</h1>'
-    "<p>Un CV ou une lettre de motivation adaptés à l'offre, prêts à télécharger.</p></div></div>",
-    unsafe_allow_html=True,
-)
+st.markdown(hero_html(), unsafe_allow_html=True)
+
+# Bouton de don visible d'emblée (la barre latérale est repliée sur mobile).
+with st.popover("💛 Soutenir Pavel IA CV"):
+    st.markdown("**Merci pour votre soutien !**")
+    render_support()
+
+stepper_slot = st.empty()  # rempli plus bas, une fois l'état connu
 
 with st.sidebar:
     st.markdown("### Réglages")
@@ -95,7 +100,7 @@ with st.sidebar:
 with st.form("cv_form"):
     doc_type = st.radio("Document à créer", ["Lettre de motivation", "CV"], horizontal=True)
 
-    st.markdown("##### Candidat et poste")
+    st.markdown(section_html("🎯", "Candidat et poste"), unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     with c1:
         name = st.text_input("Nom et prénom")
@@ -110,7 +115,7 @@ with st.form("cv_form"):
     with c4:
         length = st.selectbox("Longueur", list(LENGTHS["cv"].keys()), index=1)
 
-    st.markdown("##### Votre parcours")
+    st.markdown(section_html("🧭", "Votre parcours"), unsafe_allow_html=True)
     background = st.text_area(
         "Parcours et compétences clés",
         height=160,
@@ -118,7 +123,7 @@ with st.form("cv_form"):
         placeholder="Ex : 3 ans en gestion de projet chez X, 12 personnes coordonnées, maîtrise d'Excel et de Jira, autonomie…",
     )
 
-    st.markdown("##### Offre d'emploi")
+    st.markdown(section_html("📋", "Offre d'emploi"), unsafe_allow_html=True)
     offer = st.text_area(
         "Texte de l'annonce (facultatif)",
         height=140,
@@ -132,7 +137,7 @@ with st.form("cv_form"):
         placeholder="Ex : insister sur ma disponibilité immédiate.",
     )
 
-    submitted = st.form_submit_button("Générer mon document", type="primary")
+    submitted = st.form_submit_button("✨ Générer mon document", type="primary")
 
 
 def request_regeneration():
@@ -153,6 +158,15 @@ if submitted:
 if not submitted and st.session_state.pop("regen", False):
     params = st.session_state.get("params")
 
+# Étapes (1 = informations, 2 = rédaction, 3 = téléchargement)
+if params and api_key:
+    step = 2
+elif st.session_state.get("result_text"):
+    step = 3
+else:
+    step = 1
+stepper_slot.markdown(stepper_html(step), unsafe_allow_html=True)
+
 # Génération
 if params:
     if not api_key:
@@ -160,7 +174,7 @@ if params:
     else:
         st.session_state["params"] = params
         system_prompt, user_prompt = build_prompts(params)
-        st.markdown("#### Rédaction en cours")
+        st.markdown(section_html("✨", "Rédaction en cours…"), unsafe_allow_html=True)
         try:
             with st.container(border=True):
                 raw_text = st.write_stream(
@@ -180,7 +194,7 @@ if not params and st.session_state.get("result_text"):
     is_cv = p["doc_type"].startswith("CV")
     editor_key = f"editor_{st.session_state['gen_id']}"
 
-    st.markdown("#### Votre document")
+    st.markdown(ready_html("CV" if is_cv else "lettre"), unsafe_allow_html=True)
     st.markdown(
         '<p class="result-meta">Modifiez le texte directement : les exports utilisent cette version.</p>',
         unsafe_allow_html=True,
@@ -202,11 +216,22 @@ if not params and st.session_state.get("result_text"):
         )
 
     file_base = f"{'CV' if is_cv else 'Lettre_motivation'}_{slugify(p['name'])}"
-    st.markdown("##### Télécharger")
+    st.markdown(section_html("🎨", "Modèle de mise en page"), unsafe_allow_html=True)
+    template = st.radio(
+        "Modèle de mise en page",
+        list(TEMPLATES),
+        horizontal=True,
+        key="template_choice",
+        label_visibility="collapsed",
+    )
+    st.caption(TEMPLATES[template]["desc"])
+    st.markdown(preview_html(template), unsafe_allow_html=True)
+
+    st.markdown(section_html("⬇️", "Télécharger"), unsafe_allow_html=True)
     d1, d2, d3 = st.columns(3)
     with d1:
         try:
-            pdf_bytes = build_pdf(final_text, is_cv)
+            pdf_bytes = build_pdf(final_text, is_cv, template)
         except Exception as err:  # noqa: BLE001
             pdf_bytes = None
             st.error(f"Export PDF impossible : {err}")
@@ -222,7 +247,7 @@ if not params and st.session_state.get("result_text"):
     with d2:
         if DOCX_AVAILABLE:
             try:
-                docx_bytes = build_docx(final_text, is_cv)
+                docx_bytes = build_docx(final_text, is_cv, template)
             except Exception as err:  # noqa: BLE001
                 docx_bytes = None
                 st.error(f"Export Word impossible : {err}")
@@ -258,7 +283,7 @@ if not params and st.session_state.get("result_text"):
         match = keyword_match(p["offer"], final_text)
         if match:
             found, total, missing = match
-            st.markdown("##### Correspondance avec l'offre")
+            st.markdown(section_html("🔎", "Correspondance avec l'offre"), unsafe_allow_html=True)
             st.progress(found / total, text=f"{found} mots-clés sur {total} présents dans votre document")
             if missing:
                 st.caption(
