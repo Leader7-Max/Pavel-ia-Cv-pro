@@ -68,7 +68,7 @@ h1, h2, h3, h4, h5 {
   overflow: hidden;
   border-radius: 20px;
   padding: 1.1rem 1rem 1rem;
-  margin-bottom: 1.2rem !important;
+  margin-bottom: 1.5rem !important;
   color: #fff;
   background:
     radial-gradient(420px 260px at 96% -12%, rgba(110, 245, 220, .34), transparent 62%),
@@ -212,49 +212,6 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--sun) !important
 }
 [data-testid="stPopover"] button, [data-testid="stPopoverButton"] {
   background: linear-gradient(135deg, #F2A93B 0%, #FFC94D 100%) !important;
-  color: #12272B !important; border: none !important; font-weight: 800 !important;
-  border-radius: 14px !important; animation: donate-pulse 2.6s ease-in-out infinite;
-}
-[data-testid="stPopover"] button p, [data-testid="stPopoverButton"] p { color: #12272B !important; font-weight: 800 !important; }
-@keyframes donate-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(242, 169, 59, .5); }
-  50% { box-shadow: 0 0 0 9px rgba(242, 169, 59, 0); }
-}
-
-/* ── Résultat ──────────────────────────────────────────── */
-.ready {
-  display: flex; align-items: center; gap: .85rem; margin: .4rem 0 .9rem; padding: .95rem 1.05rem;
-  border-radius: 18px; border: 1px solid rgba(20, 163, 139, .32);
-  background: linear-gradient(135deg, rgba(20, 163, 139, .13), rgba(255, 201, 77, .2));
-}
-.ready .tick {
-  width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 50%;
-  color: #fff; font-weight: 800; background: linear-gradient(135deg, var(--lagoon), var(--emerald));
-  box-shadow: 0 8px 16px -8px rgba(14, 107, 107, .9);
-}
-.ready strong { display: block; font-family: 'Bricolage Grotesque', sans-serif; font-size: 1.08rem; }
-.ready span:not(.tick) { color: var(--muted); font-size: .9rem; }
-.result-meta { color: var(--muted); font-size: .92rem; margin: -.2rem 0 .6rem; }
-.stTextArea textarea { line-height: 1.55; }
-[data-testid="stVerticalBlockBorderWrapper"] { border-radius: 16px; }
-[data-testid="stAlert"] { border-radius: 14px; }
-div[role="dialog"] { border-radius: 22px; }
-
-/* ── Barre latérale ────────────────────────────────────── */
-[data-testid="stSidebar"] {
-  background: linear-gradient(180deg, #FFFFFF 0%, #F1F8F8 100%); border-right: 1px solid var(--line);
-}
-[data-testid="stMetric"] {
-  background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: .6rem .8rem;
-}
-[data-testid="stMetricValue"] { font-family: 'Bricolage Grotesque', sans-serif; color: var(--lagoon); }
-.tip { color: var(--muted); font-size: .92rem; line-height: 1.5; }
-
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
-}
-</style>
-"""d: linear-gradient(135deg, #F2A93B 0%, #FFC94D 100%) !important;
   color: #12272B !important; border: none !important; font-weight: 800 !important;
   border-radius: 14px !important; animation: donate-pulse 2.6s ease-in-out infinite;
 }
