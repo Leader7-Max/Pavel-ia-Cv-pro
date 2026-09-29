@@ -1,3 +1,4 @@
+from donations import initialiser_systeme_don
 """Pavel IA CV — générateur de CV et lettres de motivation sur-mesure."""
 
 import re
@@ -5,7 +6,7 @@ import re
 import streamlit as st
 
 # set_page_config doit être la toute première commande Streamlit.
-st.set_page_config(
+st.set_page_config(initialiser_systeme_don()
     page_title="Pavel IA CV",
     page_icon="📄",
     layout="centered",
