@@ -1,4 +1,4 @@
-"""Pavel IA CV — moteur IA Gemini pour CV, lettres et candidatures."""
+"""Pavel IA CV - moteur IA Gemini pour CV, lettres et candidatures."""
 
 from __future__ import annotations
 
@@ -10,11 +10,8 @@ from google import genai
 from google.genai import types
 
 
-# ============================================================
-# CONFIGURATION
-# ============================================================
+DEFAULT_MODEL = "gemini-2.5-flash"
 
-DEFAULT_MODEL = "gemini-3.8-flash"
 
 SUPPORTED_LANGUAGES = {
     "Français": "français",
@@ -23,6 +20,7 @@ SUPPORTED_LANGUAGES = {
     "Español": "espagnol",
     "Italiano": "italien",
 }
+
 
 CV_FORMATS = {
     "CV classique": "sobre, professionnel, clair et chronologique",
@@ -37,12 +35,7 @@ CV_FORMATS = {
 }
 
 
-# ============================================================
-# UTILITAIRES
-# ============================================================
-
 def _clean(value: Any, maximum: int | None = None) -> str:
-    """Nettoie une valeur utilisateur."""
     if value is None:
         return ""
 
@@ -55,17 +48,10 @@ def _clean(value: Any, maximum: int | None = None) -> str:
 
 
 def _language_name(language: str) -> str:
-    """Retourne le nom complet de la langue."""
     return SUPPORTED_LANGUAGES.get(language, language or "français")
 
 
-# ============================================================
-# INSTRUCTIONS DOCUMENT
-# ============================================================
-
 def _document_instruction(params: dict[str, Any]) -> str:
-    """Construit les instructions propres au type de document."""
-
     doc_type = _clean(params.get("doc_type"))
     job = _clean(params.get("job"))
     company = _clean(params.get("company"))
@@ -79,290 +65,105 @@ def _document_instruction(params: dict[str, Any]) -> str:
             "professionnel, moderne et parfaitement lisible",
         )
 
-        return f"""
-TYPE DE DOCUMENT : CV
-
-POSTE VISÉ :
-{job}
-
-ENTREPRISE :
-{company or "Non précisée"}
-
-LANGUE :
-{language}
-
-LONGUEUR :
-{length or "Équilibrée"}
-
-TON :
-{tone or "Professionnel"}
-
-STYLE :
-{format_hint}
-
-OBJECTIF :
-
-Créer un CV professionnel directement utilisable pour une candidature.
-
-Le CV doit :
-
-- avoir un titre professionnel précis ;
-- contenir un profil professionnel clair ;
-- présenter les expériences de manière structurée ;
-- mettre en valeur les compétences réellement fournies ;
-- utiliser des verbes d'action ;
-- être facile à lire ;
-- être compatible avec une lecture humaine ;
-- être compatible avec une lecture ATS ;
-- reprendre naturellement les mots-clés pertinents de l'offre ;
-- ne jamais inventer une information.
-
-Ne jamais inventer :
-
-- expérience ;
-- entreprise ;
-- diplôme ;
-- certification ;
-- date ;
-- compétence ;
-- responsabilité ;
-- chiffre ;
-- résultat.
-"""
-
-    return f"""
-TYPE DE DOCUMENT : LETTRE DE MOTIVATION
-
-POSTE VISÉ :
-{job}
-
-ENTREPRISE :
-{company or "Non précisée"}
-
-LANGUE :
-{language}
-
-LONGUEUR :
-{length or "Équilibrée"}
-
-TON :
-{tone or "Professionnel"}
-
-OBJECTIF :
-
-Rédiger une lettre de motivation personnalisée, naturelle et crédible.
-
-La lettre doit :
-
-- commencer par une accroche naturelle ;
-- montrer l'intérêt pour le poste ;
-- mettre en valeur les compétences réellement fournies ;
-- utiliser les éléments pertinents de l'offre ;
-- expliquer la motivation ;
-- rester humaine ;
-- éviter les phrases génériques ;
-- ne jamais inventer une information.
-"""
-
-
-# ============================================================
-# PROMPT SYSTÈME
-# ============================================================
-
-def _global_system_prompt() -> str:
-    """Instruction principale de Pavel IA."""
-
-    return """
-Tu es Pavel IA, un assistant professionnel spécialisé dans :
-
-- les CV ;
-- les lettres de motivation ;
-- les candidatures ;
-- l'analyse d'offres d'emploi ;
-- l'amélioration de profils professionnels.
-
-MISSION :
-
-Transformer les informations fournies par le candidat en documents
-professionnels, crédibles, clairs et directement exploitables.
-
-RÈGLE ABSOLUE :
-
-NE JAMAIS INVENTER DE FAITS.
-
-Tu peux :
-
-- corriger la grammaire ;
-- améliorer le style ;
-- restructurer les informations ;
-- professionnaliser une description ;
-- utiliser des verbes d'action ;
-- mettre en valeur une compétence explicitement indiquée ;
-- adapter le vocabulaire à une offre ;
-- proposer une formulation plus claire.
-
-Tu ne dois jamais :
-
-- inventer une expérience ;
-- inventer une entreprise ;
-- inventer un diplôme ;
-- inventer une certification ;
-- inventer une compétence ;
-- inventer une date ;
-- inventer un chiffre ;
-- inventer un résultat ;
-- transformer une exigence de l'annonce en compétence acquise.
-
-Si une information importante manque, utiliser :
-
-[À compléter]
-
-QUALITÉ :
-
-Le résultat doit être :
-
-- naturel ;
-- professionnel ;
-- précis ;
-- crédible ;
-- lisible ;
-- adapté au poste.
-
-ÉVITER :
-
-- les répétitions ;
-- les phrases artificielles ;
-- les superlatifs excessifs ;
-- les formulations vagues ;
-- les emojis dans les documents professionnels ;
-- les commentaires adressés à l'utilisateur dans le document.
-
-FORMAT :
-
-Retourner uniquement le document demandé.
-
-Ne pas commencer par :
-
-"Voici votre CV"
-
-"Voici votre lettre"
-
-"Bien sûr"
-
-"En tant qu'IA"
-
-Pour un CV, utiliser une structure claire avec des titres.
-
-Pour une lettre, retourner uniquement la lettre.
-"""
-
-
-# ============================================================
-# FONCTION UTILISÉE PAR APP.PY
-# ============================================================
-
-def build_prompts(params: dict[str, Any]) -> tuple[str, str]:
-    """
-    Construit le prompt système et le prompt utilisateur.
-
-    Cette fonction est appelée directement par app.py.
-    """
-
-    if not isinstance(params, dict):
-        raise TypeError(
-            "Les paramètres du document doivent être un dictionnaire."
+        return (
+            "Produis un CV en "
+            f"{language}. "
+            f"Poste cible : {job or 'à déterminer'}. "
+            f"Entreprise cible : {company or 'non précisée'}. "
+            f"Longueur souhaitée : {length or 'équilibrée'}. "
+            f"Style : {format_hint}. "
+            f"Ton : {tone or 'professionnel'}. "
+            "Structure le CV avec des rubriques clairement identifiables. "
+            "Mets en avant les résultats, compétences et réalisations. "
+            "N'invente aucune expérience, date, diplôme, entreprise, "
+            "certification, compétence ou information personnelle. "
+            "Lorsque l'information manque, utilise une formulation prudente "
+            "ou laisse la donnée à compléter."
         )
 
-    name = _clean(params.get("name"), 200)
-    job = _clean(params.get("job"), 300)
-    company = _clean(params.get("company"), 300)
-    background = _clean(params.get("background"), 8000)
-    offer = _clean(params.get("offer"), 10000)
-    notes = _clean(params.get("notes"), 3000)
-    doc_type = _clean(params.get("doc_type"), 100)
-    language = _language_name(_clean(params.get("language")))
-    tone = _clean(params.get("tone"))
-    length = _clean(params.get("length"))
+    return (
+        "Produis une lettre de motivation en "
+        f"{language}. "
+        f"Poste ciblé : {job or 'à déterminer'}. "
+        f"Entreprise : {company or 'non précisée'}. "
+        f"Longueur : {length or 'équilibrée'}. "
+        f"Ton : {tone or 'professionnel'}. "
+        "La lettre doit être personnalisée à partir des informations "
+        "fournies et de l'offre d'emploi. "
+        "Évite les phrases génériques et les affirmations non vérifiées. "
+        "N'invente aucune expérience ou qualification."
+    )
 
+
+def _global_system_prompt() -> str:
+    return (
+        "Tu es Pavel IA CV, un assistant spécialisé dans les candidatures "
+        "professionnelles. Tu aides à créer, améliorer, analyser et adapter "
+        "des CV et lettres de motivation. "
+        "Tu dois être précis, professionnel, naturel et orienté recrutement. "
+        "Respecte strictement les informations fournies par l'utilisateur. "
+        "N'invente jamais de faits personnels ou professionnels. "
+        "Tu peux reformuler une information existante pour la rendre plus "
+        "claire et convaincante, sans changer son sens. "
+        "Évite les emojis dans les documents professionnels sauf demande "
+        "expresse. "
+        "Réponds directement avec le contenu demandé, sans préambule "
+        "inutile."
+    )
+
+
+def build_prompts(params: dict[str, Any]) -> tuple[str, str]:
     system_prompt = _global_system_prompt()
 
-    user_prompt = f"""
-Tu dois maintenant créer le document demandé.
+    document_instruction = _document_instruction(params)
 
-==================================================
-IDENTITÉ DU CANDIDAT
-==================================================
+    name = _clean(params.get("name"))
+    job = _clean(params.get("job"))
+    company = _clean(params.get("company"))
+    language = _language_name(_clean(params.get("language")))
+    background = _clean(params.get("background"), 12000)
+    job_offer = _clean(params.get("job_offer"), 15000)
+    notes = _clean(params.get("notes"), 8000)
+    doc_type = _clean(params.get("doc_type"))
 
-Nom et prénom :
-{name}
-
-==================================================
-POSTE
-==================================================
-
-Poste visé :
-{job}
-
-Entreprise :
-{company or "Non précisée"}
-
-==================================================
-PARAMÈTRES
-==================================================
-
-Type de document :
-{doc_type}
-
-Langue :
-{language}
-
-Ton :
-{tone or "Professionnel"}
-
-Longueur :
-{length or "Équilibrée"}
-
-==================================================
-PARCOURS DU CANDIDAT
-==================================================
-
-{background}
-
-==================================================
-OFFRE D'EMPLOI
-==================================================
-
-{offer or "Aucune offre fournie."}
-
-==================================================
-CONSIGNES PARTICULIÈRES
-==================================================
-
-{notes or "Aucune consigne particulière."}
-
-==================================================
-INSTRUCTIONS
-==================================================
-
-1. Analyse toutes les informations.
-2. Identifie les éléments utiles à la candidature.
-3. Reformule les informations professionnellement.
-4. Si une offre est fournie, identifie ses mots-clés pertinents.
-5. Utilise uniquement les mots-clés correspondant réellement au profil.
-6. Ne transforme jamais une exigence de l'annonce en compétence acquise.
-7. N'invente aucune information.
-8. Respecte la langue demandée.
-9. Retourne directement le document final.
-"""
-
-    user_prompt += _document_instruction(params)
+    user_prompt = (
+        f"TYPE DE DOCUMENT : {doc_type or 'candidature'}\n"
+        f"LANGUE : {language}\n"
+        f"NOM : {name or 'non renseigné'}\n"
+        f"POSTE CIBLE : {job or 'non renseigné'}\n"
+        f"ENTREPRISE : {company or 'non renseignée'}\n\n"
+        f"INSTRUCTIONS DE FORMAT :\n{document_instruction}\n\n"
+        "PROFIL / PARCOURS FOURNI PAR L'UTILISATEUR :\n"
+        f"{background or 'Aucune information supplémentaire fournie.'}\n\n"
+        "OFFRE D'EMPLOI :\n"
+        f"{job_offer or 'Aucune offre fournie.'}\n\n"
+        "NOTES OU CONSIGNES SUPPLÉMENTAIRES :\n"
+        f"{notes or 'Aucune.'}\n\n"
+        "Consigne finale : crée un document directement utilisable pour une "
+        "candidature. Ne crée pas de faits qui ne figurent pas dans les "
+        "informations fournies."
+    )
 
     return system_prompt, user_prompt
 
 
-# ============================================================
-# GÉNÉRATION GEMINI EN STREAMING
-# ============================================================
+def _temperature(creativity: float) -> float:
+    try:
+        value = float(creativity)
+    except (TypeError, ValueError):
+        value = 0.6
+
+    return max(0.0, min(1.0, value))
+
+
+def _client(api_key: str) -> genai.Client:
+    key = _clean(api_key)
+
+    if not key:
+        raise ValueError("Clé API Gemini manquante.")
+
+    return genai.Client(api_key=key)
+
 
 def stream_document(
     api_key: str,
@@ -370,47 +171,276 @@ def stream_document(
     user_prompt: str,
     creativity: float = 0.6,
 ) -> Iterator[str]:
-    """
-    Génère le document avec Gemini progressivement.
+    client = _client(api_key)
 
-    Compatible avec :
+    response_stream = client.models.generate_content_stream(
+        model=DEFAULT_MODEL,
+        contents=user_prompt,
+        config=types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            temperature=_temperature(creativity),
+            max_output_tokens=8192,
+        ),
+    )
 
-        st.write_stream(
-            stream_document(
-                api_key,
-                system_prompt,
-                user_prompt,
-                creativity,
-            )
-        )
-    """
+    for chunk in response_stream:
+        text = getattr(chunk, "text", None)
 
-    api_key = _clean(api_key)
+        if text:
+            yield text
 
-    if not api_key:
-        raise ValueError(
-            "La clé API Gemini est absente. "
-            "Ajoutez GEMINI_API_KEY dans les secrets."
-        )
 
-    try:
-        temperature = float(creativity)
-    except (TypeError, ValueError):
-        temperature = 0.6
+def _generate_text(
+    api_key: str,
+    system_prompt: str,
+    user_prompt: str,
+    creativity: float = 0.4,
+    max_output_tokens: int = 8192,
+) -> str:
+    client = _client(api_key)
 
-    temperature = max(0.0, min(1.0, temperature))
+    response = client.models.generate_content(
+        model=DEFAULT_MODEL,
+        contents=user_prompt,
+        config=types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            temperature=_temperature(creativity),
+            max_output_tokens=max_output_tokens,
+        ),
+    )
 
-    try:
-        client = genai.Client(api_key=api_key)
+    text = getattr(response, "text", None)
 
-        response_stream = client.models.generate_content_stream(
-            model=DEFAULT_MODEL,
-            contents=user_prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=system_prompt,
-                temperature=temperature,
-                max_output_tokens=8192,
-            ),
+    if not text:
+        raise RuntimeError("Gemini n'a renvoyé aucun contenu.")
+
+    return text.strip()
+
+
+def analyze_cv(api_key: str, cv_text: str) -> str:
+    system = _global_system_prompt() + (
+        " Analyse les CV comme un recruteur et un spécialiste ATS. "
+        "Sépare clairement les points forts, les éléments à améliorer, "
+        "les mots-clés, la lisibilité et les informations manquantes."
+    )
+
+    prompt = (
+        "Analyse le CV ci-dessous.\n\n"
+        "CV :\n"
+        f"{_clean(cv_text, 30000)}\n\n"
+        "Retourne une analyse structurée avec :\n"
+        "1. Points forts\n"
+        "2. Points à améliorer\n"
+        "3. Compatibilité ATS\n"
+        "4. Mots-clés utiles\n"
+        "5. Informations manquantes\n"
+        "6. Actions concrètes à effectuer"
+    )
+
+    return _generate_text(api_key, system, prompt)
+
+
+def analyze_job_offer(api_key: str, job_offer: str) -> str:
+    system = _global_system_prompt() + (
+        " Analyse les offres d'emploi afin d'identifier les attentes "
+        "explicites et implicites sans inventer d'informations."
+    )
+
+    prompt = (
+        "Analyse cette offre d'emploi.\n\n"
+        f"{_clean(job_offer, 30000)}\n\n"
+        "Retourne :\n"
+        "1. Poste et missions\n"
+        "2. Compétences demandées\n"
+        "3. Expérience demandée\n"
+        "4. Mots-clés ATS\n"
+        "5. Qualités recherchées\n"
+        "6. Éléments importants à mettre dans le CV\n"
+        "7. Points à vérifier avant candidature"
+    )
+
+    return _generate_text(api_key, system, prompt)
+
+
+def match_cv_to_offer(
+    api_key: str,
+    cv_text: str,
+    job_offer: str,
+) -> str:
+    system = _global_system_prompt() + (
+        " Compare objectivement un CV avec une offre. "
+        "Ne fabrique pas de pourcentage de compatibilité sans calcul "
+        "explicite et ne présente pas une estimation comme un fait."
+    )
+
+    prompt = (
+        "Compare les deux contenus suivants.\n\n"
+        "CV :\n"
+        f"{_clean(cv_text, 30000)}\n\n"
+        "OFFRE :\n"
+        f"{_clean(job_offer, 30000)}\n\n"
+        "Présente :\n"
+        "1. Correspondances\n"
+        "2. Compétences présentes mais peu visibles\n"
+        "3. Compétences demandées absentes du CV\n"
+        "4. Mots-clés à intégrer uniquement s'ils sont réellement justifiés\n"
+        "5. Modifications recommandées\n"
+        "6. Risques ou incohérences éventuels"
+    )
+
+    return _generate_text(api_key, system, prompt)
+
+
+def improve_cv(
+    api_key: str,
+    cv_text: str,
+    target_job: str = "",
+) -> str:
+    system = _global_system_prompt()
+
+    target = _clean(target_job) or "poste correspondant au profil"
+
+    prompt = (
+        f"Améliore ce CV pour le poste suivant : {target}.\n\n"
+        f"CV actuel :\n{_clean(cv_text, 30000)}\n\n"
+        "Conserve toutes les informations vérifiables. "
+        "Améliore la formulation, la structure, la précision et les mots-clés "
+        "pertinents. Ne crée aucune expérience, date ou qualification."
+    )
+
+    return _generate_text(api_key, system, prompt)
+
+
+def generate_profile(
+    api_key: str,
+    cv_text: str,
+    language: str = "Français",
+) -> str:
+    lang = _language_name(language)
+
+    system = _global_system_prompt()
+
+    prompt = (
+        f"À partir du CV suivant, rédige un profil professionnel en {lang}.\n\n"
+        f"{_clean(cv_text, 20000)}\n\n"
+        "Fournis un résumé professionnel court, naturel et crédible, "
+        "adapté au haut d'un CV ou à un profil professionnel en ligne. "
+        "N'ajoute aucune information absente du CV."
+    )
+
+    return _generate_text(api_key, system, prompt)
+
+
+def rewrite_experience(
+    api_key: str,
+    experience: str,
+    target_job: str = "",
+) -> str:
+    target = _clean(target_job) or "poste ciblé"
+
+    system = _global_system_prompt()
+
+    prompt = (
+        f"Réécris cette expérience pour une candidature au poste de {target}.\n\n"
+        f"Expérience originale :\n{_clean(experience, 12000)}\n\n"
+        "Utilise des verbes d'action et une formulation professionnelle. "
+        "Valorise les responsabilités et résultats lorsqu'ils sont présents. "
+        "Ne transforme pas une responsabilité en résultat chiffré inventé."
+    )
+
+    return _generate_text(api_key, system, prompt)
+
+
+def translate_document(
+    api_key: str,
+    document: str,
+    target_language: str,
+) -> str:
+    language = _language_name(target_language)
+
+    system = _global_system_prompt()
+
+    prompt = (
+        f"Traduis le document professionnel suivant en {language}.\n\n"
+        f"{_clean(document, 30000)}\n\n"
+        "Conserve le sens, les noms propres, les dates et les informations "
+        "factuelles. Adapte les formulations au contexte professionnel de "
+        "la langue cible sans inventer de contenu."
+    )
+
+    return _generate_text(
+        api_key,
+        system,
+        prompt,
+        creativity=0.2,
+    )
+
+
+def cv_express(
+    api_key: str,
+    name: str,
+    target_job: str,
+    background: str,
+    language: str = "Français",
+) -> str:
+    lang = _language_name(language)
+
+    system = _global_system_prompt()
+
+    prompt = (
+        f"Crée un CV Express en {lang}.\n\n"
+        f"Nom : {_clean(name)}\n"
+        f"Poste ciblé : {_clean(target_job)}\n"
+        f"Parcours et compétences : {_clean(background, 20000)}\n\n"
+        "Structure : titre professionnel, profil, compétences, expériences "
+        "ou projets, formation et informations complémentaires lorsque "
+        "disponibles. Si une rubrique n'est pas documentée, ne l'invente pas."
+    )
+
+    return _generate_text(api_key, system, prompt)
+
+
+def sanitize_document(document: str) -> str:
+    text = _clean(document)
+
+    replacements = {
+        "\r\n": "\n",
+        "\r": "\n",
+        "\u00a0": " ",
+        "\u2013": "-",
+        "\u2014": "-",
+        "\u2018": "'",
+        "\u2019": "'",
+        "\u201c": '"',
+        "\u201d": '"',
+        "\u2026": "...",
+    }
+
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+
+    text = re.sub(r"\n{4,}", "\n\n\n", text)
+    text = re.sub(r"[ \t]{2,}", " ", text)
+
+    return text.strip()
+
+
+__all__ = [
+    "DEFAULT_MODEL",
+    "SUPPORTED_LANGUAGES",
+    "CV_FORMATS",
+    "build_prompts",
+    "stream_document",
+    "analyze_cv",
+    "analyze_job_offer",
+    "match_cv_to_offer",
+    "improve_cv",
+    "generate_profile",
+    "rewrite_experience",
+    "translate_document",
+    "cv_express",
+    "sanitize_document",
+    ]    ),
         )
 
         received_text = False
