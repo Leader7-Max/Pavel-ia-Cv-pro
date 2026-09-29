@@ -1,0 +1,106 @@
+"""Génération du CV / de la lettre avec Gemini."""
+
+from google import genai
+from google.genai import types
+
+from config import LENGTHS, MODELS
+
+
+# ─────────────────────────────────────────────────────────────
+# Génération IA
+# ─────────────────────────────────────────────────────────────
+def build_prompts(p: dict) -> tuple[str, str]:
+    is_cv = p["doc_type"].startswith("CV")
+    kind = "cv" if is_cv else "lettre"
+    length = LENGTHS[kind][p["length"]]
+
+    if is_cv:
+        structure = (
+            "STRUCTURE DU CV (chaque titre de section en MAJUSCULES, seul sur sa ligne) :\n"
+            "- Ligne 1 : nom et prénom. Ligne 2 : intitulé du poste visé.\n"
+            "- PROFIL : 3 lignes maximum.\n"
+            "- COMPÉTENCES CLÉS : liste courte, orientée vers l'offre.\n"
+            "- EXPÉRIENCES PROFESSIONNELLES : pour chaque expérience, une ligne "
+            "« Poste, Structure (période) » puis des puces commençant par un verbe d'action "
+            "et, si possible, un résultat.\n"
+            "- FORMATION\n"
+            "- LANGUES ET ATOUTS (si pertinent)\n"
+            f"Le CV {length}."
+        )
+    else:
+        structure = (
+            "STRUCTURE DE LA LETTRE :\n"
+            "- Coordonnées du candidat (entre crochets si inconnues), lieu et date, "
+            "destinataire.\n"
+            "- Objet.\n"
+            "- Formule d'appel.\n"
+            "- 3 ou 4 paragraphes : accroche personnalisée, valeur ajoutée du candidat "
+            "avec des exemples concrets, motivation pour l'entreprise, ouverture vers un entretien.\n"
+            "- Formule de politesse et signature.\n"
+            f"La lettre fait {length}."
+        )
+
+    system = (
+        "Tu es un expert en recrutement et en rédaction de CV et de lettres de motivation, "
+        "capable d'écrire des documents optimisés pour les logiciels de tri (ATS) tout en "
+        "restant agréables à lire pour un recruteur.\n"
+        "RÈGLES ABSOLUES :\n"
+        "1. N'invente JAMAIS de fait : employeur, diplôme, date, chiffre ou outil absent des "
+        "informations fournies. Si une information utile manque, insère un champ entre "
+        "crochets, par exemple [ville] ou [chiffre à préciser].\n"
+        "2. Écris en texte brut : pas de Markdown, pas de titres avec #, pas de gras. "
+        "Utilise « • » pour les puces.\n"
+        "3. Style clair, concret, sans formules creuses ni superlatifs inutiles.\n"
+        f"4. Rédige en {p['language']}.\n"
+        "5. Réponds uniquement avec le document final, sans commentaire avant ni après."
+    )
+
+    offer = p["offer"] or "Aucune offre fournie. Base-toi sur les standards du poste visé."
+    prompt = f"""Rédige : {p['doc_type']}
+
+INFORMATIONS SUR LE CANDIDAT
+- Nom et prénom : {p['name']}
+- Poste visé : {p['job']}
+- Entreprise ciblée : {p['company'] or 'Non précisée'}
+- Parcours et compétences : {p['background']}
+- Ton souhaité : {p['tone']}
+- Consignes particulières : {p['notes'] or 'Aucune'}
+
+OFFRE D'EMPLOI DE RÉFÉRENCE
+{offer}
+
+{structure}
+
+Si une offre est fournie, reprends naturellement ses mots-clés et compétences attendues, \
+uniquement lorsqu'ils correspondent au parcours du candidat."""
+    return system, prompt
+
+
+def stream_document(api_key: str, system: str, prompt: str, temperature: float):
+    """Génère le texte en flux continu, avec un modèle de secours si le premier échoue."""
+    client = genai.Client(api_key=api_key)
+    last_error = None
+    for model in MODELS:
+        started = False
+        try:
+            stream = client.models.generate_content_stream(
+                model=model,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=system,
+                    temperature=temperature,
+                ),
+            )
+            for chunk in stream:
+                if chunk.text:
+                    started = True
+                    yield chunk.text
+            if started:
+                return
+            last_error = RuntimeError("Réponse vide du modèle.")
+        except Exception as err:  # noqa: BLE001
+            if started:
+                raise  # flux interrompu en cours de route : inutile de relancer
+            last_error = err
+    raise last_error
+  
