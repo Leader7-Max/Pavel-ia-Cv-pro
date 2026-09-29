@@ -292,4 +292,4 @@ if not params and st.session_state.get("result_text"):
                 st.caption(
                     "Mots-clés absents (à ajouter seulement s'ils correspondent à votre parcours) : "
                     + ", ".join(missing[:10])
-            )
+    )
