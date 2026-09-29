@@ -15,6 +15,7 @@ st.set_page_config(
 from ai import build_prompts, stream_document  # noqa: E402
 from config import CSS, LENGTHS, LOGO_SVG, TONES  # noqa: E402
 from exporters import DOCX_AVAILABLE, build_docx, build_pdf  # noqa: E402
+from support import maybe_show_support, on_download, render_support  # noqa: E402
 from helpers import (  # noqa: E402
     bump_stat,
     clean_output,
@@ -89,13 +90,7 @@ with st.sidebar:
 
     with st.popover("☕ Faire un don / Encourager"):
         st.markdown("**Merci pour votre soutien !**")
-        st.link_button("✈️ via PayPal.me", "https://www.paypal.me/Pavelia38")
-
-        iban = get_secret("IBAN")
-        if iban:
-            st.write("")
-            st.markdown("**🏦 via Virement bancaire**")
-            st.markdown(f"**IBAN :** `{iban}`")
+        render_support()
 
 with st.form("cv_form"):
     doc_type = st.radio("Document à créer", ["Lettre de motivation", "CV"], horizontal=True)
@@ -221,6 +216,7 @@ if not params and st.session_state.get("result_text"):
                 data=pdf_bytes,
                 file_name=f"{file_base}.pdf",
                 mime="application/pdf",
+                on_click=on_download,
                 type="primary",
             )
     with d2:
@@ -236,6 +232,7 @@ if not params and st.session_state.get("result_text"):
                     data=docx_bytes,
                     file_name=f"{file_base}.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    on_click=on_download,
                     type="primary",
                 )
         else:
@@ -246,7 +243,10 @@ if not params and st.session_state.get("result_text"):
             data=final_text.encode("utf-8"),
             file_name=f"{file_base}.txt",
             mime="text/plain",
+            on_click=on_download,
         )
+
+    maybe_show_support()
 
     st.button(
         "🔄 Régénérer avec les mêmes informations",
@@ -264,5 +264,4 @@ if not params and st.session_state.get("result_text"):
                 st.caption(
                     "Mots-clés absents (à ajouter seulement s'ils correspondent à votre parcours) : "
                     + ", ".join(missing[:10])
-                    )
-  
+                )
